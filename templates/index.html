@@ -1,0 +1,210 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Anomaly Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input[type="text"], 
+        select, 
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .normal {
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            color: #3c763d;
+        }
+
+        .anomalous {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+        }
+
+        .features {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+            margin: 20px 0;
+        }
+
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WEB APPLICATION FIREWALL</h1>
+        
+        <div class="form-group">
+            <label for="url">URL:</label>
+            <input type="text" id="url" placeholder="Enter URL to analyze">
+        </div>
+
+        <div class="form-group">
+            <label for="method">HTTP Method:</label>
+            <select id="method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="content">Content (optional):</label>
+            <textarea id="content" placeholder="Enter content if any"></textarea>
+        </div>
+
+        <button onclick="analyzeURL()">Analyze URL</button>
+
+        <div class="loading">Analyzing...</div>
+        <div class="error"></div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function analyzeURL() {
+            const url = document.getElementById('url').value.trim();
+            if (!url) {
+                showError('Please enter a URL');
+                return;
+            }
+
+            const method = document.getElementById('method').value;
+            const content = document.getElementById('content').value.trim();
+
+            // Show loading
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.error').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+
+            // Send request to server
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    url: url,
+                    method: method,
+                    content: content
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('.loading').style.display = 'none';
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                const resultDiv = document.getElementById('result');
+                resultDiv.className = data.prediction.toLowerCase();
+                resultDiv.style.display = 'block';
+                
+                resultDiv.innerHTML = `
+                    <h3>Analysis Results:</h3>
+                    <p><strong>Classification:</strong> ${data.prediction}</p>
+                    <p><strong>Confidence:</strong> ${data.confidence.toFixed(2)}%</p>
+                    
+                    <div class="features">
+                        <h4>Key Features:</h4>
+                        <p>Suspicious Score: ${data.features.suspicious_score}</p>
+                        <p>Content Suspicious Score: ${data.features.content_suspicious_score}</p>
+                        <p>Unusual Character Ratio: ${(data.features.unusual_char_ratio * 100).toFixed(2)}%</p>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                document.querySelector('.loading').style.display = 'none';
+                showError('An error occurred while analyzing the URL');
+                console.error('Error:', error);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.querySelector('.error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
